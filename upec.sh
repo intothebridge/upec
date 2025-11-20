@@ -6,6 +6,9 @@
 #
 # this script does NOT take any arguments! All parameters are defined using variables in the heading zone!
 #
+# =============================== PREREQUISITES ===============================
+# in upec's working dir there HAS TO BE the executable parse_eit, see https://github.com/intothebridge/parse_eit
+#
 # =============================== features =====================================
 #
 # === Ignore Directories ===
