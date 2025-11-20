@@ -15,7 +15,9 @@ upec is a bash script which iterates through a (large) movie collection and DVB-
 
 * a linux distro
 * bash
-* and the eit-parser: https://github.com/intothebridge/parse_eit in the wokring
+* and the eit-parser: https://github.com/intothebridge/parse_eit in the working directory (easy task)
 
+Have fun!
+gearginner
 
   
