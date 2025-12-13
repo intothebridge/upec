@@ -1,15 +1,19 @@
 #!/bin/bash
 # this program comes with absolutely NO WARRANTY! For GLP v3 license see github
 # CREDITS:
-# this script makes use of https://github.com/Andy1978/parse_eit 
+# this script is based on the initial work of TwT from the keywelt-forum. Without his
+# work I would never have started this project. Thanks to him for delivering the core structure
+# for EIT parsing!
+# (see: http://www.keywelt-board.com/index.php?/topic/168474-enigma2-aufnahmen-abspielen/?hl=%2Benigma2+%2Beit)
+# Other credits go to the wonderful bash-resources out there in the internet!
+#
+# Copyright:
+# Copyright: TwT (from Keywelt-board), bashforever (from github).
 # Released to github/upec
 #
-# this script does NOT take any arguments! All parameters are defined using variables in the heading zone!
 #
-# =============================== PREREQUISITES ===============================
-# in upec's working dir there HAS TO BE the executable parse_eit, see https://github.com/intothebridge/parse_eit
-#
-# =============================== features =====================================
+# =============================== added features =====================================
+# 2017-01-18: new features!
 #
 # === Ignore Directories ===
 # You can place a file (actually a semaphore) named "upecignore.txt" in a directory. Doing this
@@ -28,23 +32,23 @@
 # CAUTION: options are case sensitive!
 # BASEPATH="/etc/iwops/upec" # path where upec, logfiles and CSV shoudl reside
 BASEPATH="/etc/iwops/upec" # path where upec, logfiles and CSV shoudl reside
-VIDEOPATH="/mnt/Recordins"
+VIDEOPATH="/mnt/Aufnahmen"
+
+# root path for your video/eit-files =======
+# VIDEOPATH="$BASEPATH"
 LOGFILE="$BASEPATH""/upec.log"
 DEBUGLOG="$BASEPATH""/upecdebug.log"
 REBUILD="y" # if set to 'y' all nfo-files are rebuilt/overwritten
 RECURSIVE="y" # if set to 'n' no subdirs will be searched for EIT-files
 MINTITLELEN=25 # if the TITLE extracted from short_descriptor is shorter than MINTITLELEN the long description will be added (concatenated)
 DRYRUN="n" # set DRYRUN to "y" if NFO files should not be built - then there is just logfiles and the CSV
-# a CSV-File where the metadata of ALL movies found is also collected - extremely useful :-)
+# curr. not implemented: WRITECSV="y" # if y: fields are also written in CSV-style to "upec.csv" 
 CSVFile="$BASEPATH""/Filmliste.csv" 
 CSVDelimiter="|"
 DEBUG="n" # if y debug output will added
 CLEARLOG="y" # if y, logfiles will be cleared on start
 CLEANUPJSON="n"
 VIDEOEXTENSIONS="ts TS mpg webm MPG mp4 MP4 avi AVI mts MTS m4v"
-
-
-
 # ============== do not change anything below ! ==============
 
 # Global declarations and initializations
@@ -159,13 +163,14 @@ function recursive_scan () {
         local filetrunc
 	
 #        cd "$TARGET"
+ 	logtext "====== Starting recursive_scan ============"
         logtext "===== Current working dir `pwd`"
 
 # set genre by current dir (full path stripped)
 	Genre=${PWD##*/}
  	logtext "==== Current dir: $PWD ==== Genre by directory: $Genre"
 # check for upecgenre. If a upecgenre.txt file is found, use it's content for genre
- 	if [ -e "upecgenre.txt" ]; then
+ 	if [ -f "upecgenre.txt" ]; then
  	    Genre=$(cat "upecgenre.txt")
  	    logtext "==== Genre for this directory overwritten with $Genre from upecgenre"
  	fi
@@ -180,18 +185,28 @@ function recursive_scan () {
  			Genre=${PWD##*/}
  			logtext "==== Current dir: $PWD ==== Genre by directory: $Genre"
  	# check for upecgenre. If a upecgenre.txt file is found, use it's content for genre
- 			if [ -e "upecgenre.txt" ]; then
+ 			if [ -f "upecgenre.txt" ]; then
  			    Genre=$(cat "upecgenre.txt")
  			    logtext "==== Genre for this directory overwritten with $Genre from upecgenre"
  			fi
 	# recursively call 
  	# check for upecignore. Scan current directory only if "upecignore.txt" is NOT found
- 			if [ ! -e "upecignore.txt" ]; then
+ 			if [ ! -f "upecignore.txt" ]; then
 			    recursive_scan 
  			else
  			    logtext "==== ignoring Subdir $d: `cat upecignore.txt`"
  			fi
+ 	# jump back but renew "genre":
  			cd ..
+        # reset genre by current dir (full path stripped)
+                        Genre=${PWD##*/}
+                        logtext "==== Current dir: $PWD ==== Genre by directory: $Genre"
+        # check for upecgenre. If a upecgenre.txt file is found, use it's content for genre
+                        if [ -f "upecgenre.txt" ]; then
+                            Genre=$(cat "upecgenre.txt")
+                            logtext "==== Genre for this directory overwritten with $Genre from upecgenre"
+                        fi
+
 		else
 	# =====================================================================
 	# object is no directory: process as file
@@ -215,11 +230,11 @@ function recursive_scan () {
 # 			    Genre=$(basename "$CurrentDir")
                             Filename="$CurrentDir/""$eitfile"
  	# check for rebuild-option
- 			    if [ -e "$nfofile" ] && [ $REBUILD = "y" ]; then
+ 			    if [ -f "$nfofile" ] && [ $REBUILD = "y" ]; then
  				logtext "==== found NFO-file $nfofile: rebuilding"
                                 parse_eit "$eitfile"
                             fi
- 			    if [ ! -e "$nfofile" ]; then
+ 			    if [ ! -f "$nfofile" ]; then
  				logtext "==== NOT found NFO-File $nfofile: creating"
  				parse_eit "$eitfile"
  			    fi
@@ -242,11 +257,11 @@ function recursive_scan () {
                                 logdebug "Filename (Title) after normalization: $Title"
                                 nfofile="$filetrunc.nfo"
                                 
-                                if [ -e "$nfofile" ] && [ $REBUILD = "y" ]; then
+                                if [ -f "$nfofile" ] && [ $REBUILD = "y" ]; then
                                     logtext "==== found NFO-file $nfofile: rebuilding"
                                     parse_filebased "$filetrunc"
                                 fi
-                                if [ ! -e "$nfofile" ]; then
+                                if [ ! -f "$nfofile" ]; then
                                     logtext "==== NOT found NFO-File $nfofile: creating"
                                     parse_filebased "$filetrunc"
                                 fi
@@ -322,6 +337,20 @@ logdebug "Genre: $Genre"
 logdebug "===== EOF XML ======="
 
 # Map Fields to XML-Output# ===== producing XML ===============
+
+# logdebug "Building $filexml"
+
+# build_XMLstring
+
+# write_CSVdata
+
+# logdebug "XMLstring: $XMLstring"
+# if [ $DRYRUN == "y" ]; then
+#     logdebug "NOT written $filexml (DRYRUN!)"
+# else
+#     echo $XMLstring | iconv -f ISO-8859-1 -t ASCII//TRANSLIT > "$filexml"
+#     logdebug "written: $filexml"
+# fi
 
 logdebug "Finished processing $file - setting Nfo-Fields"
 NfoFields=("title" "outline" "genre" "plot")
@@ -435,7 +464,17 @@ Nfo[plot]="$Plot"
 Nfo[genre]="$Genre"
 
 # Map fields to CSV output
-
+# CSVFields=("title" "outline" "plot" "filename") - CHANGE: moved CSV-field-enumeration to configuration part
+#to_printable "$Title"
+#CSVdata[title]="$RETURN"
+#to_printable "$Outline"
+#CSVdata[outline]="$RETURN"
+#to_printable "$Plot"
+#CSVdata[outline]="$RETURN"
+#to_printable "$Genre"
+#CSVdata[genre]="$RETURN"
+# to_printable "$Filename"
+# CSVdata[filename]="$RETURN"
 CSVdata[title]="$Title"
 CSVdata[outline]="$Outline"
 CSVdata[plot]="$Plot"
@@ -481,11 +520,13 @@ logdebug $RETURN
 # =============================
 # Main
 # =============================
+# parameter 1: filename
 
 logtext "================ UPEC - a ultra simple EIT Converter ======================"
 
 cd "$VIDEOPATH"
 recursive_scan
+
 
 logtext "============== UPEC finished - thank you for using me! =================="
 
